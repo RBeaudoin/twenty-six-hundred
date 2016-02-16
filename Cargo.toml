@@ -1,0 +1,6 @@
+[package]
+name = "twenty_six"
+version = "0.1.0"
+authors = ["Rich Beaudoin <rich.beaudoin.jr@gmail.com>"]
+
+[dependencies]
