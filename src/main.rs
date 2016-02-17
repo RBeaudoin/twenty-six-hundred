@@ -1,17 +1,17 @@
 extern crate twenty_six;
 
 use std::env;
+use std::fs::File;
+use std::io::Read;
+use twenty_six::Atari2600;
 
 fn main() {
 
-    //let x = &env::args().collect::<Vec<String>>()[1];
-    let x = env::args().collect::<Vec<String>>();
-    
-    println!("Argument is: {}", x[1]);
-
-    for argument in env::args() {
-        println!("{}", argument);
-    }
+    //TODO - error checking on # of args, etc.
+    let args = env::args().collect::<Vec<String>>();
+    let input_file = File::open(&args[1]).unwrap();
+   
+    let cmos_6507 =  Atari2600::new(input_file.bytes());
 
     println!("TODO: add the code here");
 }
