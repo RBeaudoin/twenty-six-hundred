@@ -20,7 +20,7 @@ impl Mos6507 {
             y: 0u8,
             sp: 0u8,
             pc: 0u8,
-            flags: 0u8,
+            flags: 0u8, //TODO set bit 5 to logical '1' by default
         }
     }
 
@@ -35,8 +35,8 @@ impl Mos6507 {
                 Some(opcode)    => {
                     
                     match opcode {
-                        //ADC
-                        Ok(0x29) => self.adc_immediate(bytes.next().unwrap().unwrap()),
+                        //ADC - Add with carry
+                        Ok(0x69) => self.adc_immediate(bytes.next().unwrap().unwrap()),
                         Ok(0x65) => self.adc_zero_page(bytes.next().unwrap().unwrap()),
                         Ok(0x75) => self.adc_zero_page_x(bytes.next().unwrap().unwrap()),
                         Ok(0x6D) => self.adc_absolute(  bytes.next().unwrap().unwrap(), 
