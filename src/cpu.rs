@@ -47,6 +47,61 @@ impl Mos6507 {
                                                         bytes.next().unwrap().unwrap()),
                         Ok(0x61) => self.adc_indirect_x(bytes.next().unwrap().unwrap()),
                         Ok(0x71) => self.adc_indirect_y(bytes.next().unwrap().unwrap()),
+                        //AND
+                        //ASL
+                        //BCC
+                        //BCS
+                        //BEQ
+                        //BIT
+                        //BMI
+                        //BNE
+                        //BPL
+                        //BRK
+                        //BVC
+                        //BVS
+                        //CLC
+                        //CLD
+                        //CLI
+                        //CLV
+                        //CMP
+                        //CPX
+                        //CPY
+                        //DEC
+                        //DEX
+                        //DEY
+                        //EOR
+                        //INC
+                        //INX
+                        //INY
+                        //JMP
+                        //JSR
+                        //LDA
+                        //LDX
+                        //LDY
+                        //LSR
+                        //NOP
+                        //ORA
+                        //PHA
+                        //PHP
+                        //PLA
+                        //PLP
+                        //ROL
+                        //ROR
+                        //RTI
+                        //RTS
+                        //SBS
+                        //SEC
+                        //SED
+                        //SEI
+                        //STA
+                        //STX
+                        //STY
+                        //TAX
+                        //TAY
+                        //TYA
+                        //TSX
+                        //TXA
+                        //TXS
                         Ok(x) => println!("Ignoring opcode {}", x),
                         Err(err) => return Err(()), //TODO better error handling
                     }
@@ -54,7 +109,6 @@ impl Mos6507 {
                 None            => break, //Program done executing
             }
         }
-
         Ok(1)
     }
 
@@ -88,5 +142,15 @@ impl Mos6507 {
 
     fn adc_indirect_y(&self, operand: u8) {
     
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn it_works() {
+        assert_eq!(4, 4);
     }
 }
