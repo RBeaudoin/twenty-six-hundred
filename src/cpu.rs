@@ -7,7 +7,7 @@ pub struct Mos6507 {
     x: u8,
     y: u8,
     sp: u8,
-    pc: u8,
+    pc: u16,
     flags: u8,
 }
 
@@ -19,14 +19,12 @@ impl Mos6507 {
             x: 0u8,
             y: 0u8,
             sp: 0u8,
-            pc: 0u8,
-            flags: 0u8, //TODO set bit 5 to logical '1' by default
+            pc: 0u16,
+            flags: 0u8, //TODO - set flags to appropriate defaults
         }
     }
 
     pub fn run(&self) -> Result<i32,()> {
-        println!("Mos6507: Running program");
-        
         let mut bytes = self.program.bytes();
         
         loop  {
@@ -109,7 +107,7 @@ impl Mos6507 {
                 None            => break, //Program done executing
             }
         }
-        Ok(1)
+        Ok(0)
     }
 
     fn adc_immediate(&self, operand: u8) {

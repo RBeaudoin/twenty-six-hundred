@@ -1,4 +1,6 @@
 pub mod cpu;
+pub mod tia;
+pub mod pia;
 
 use std::fs::File;
 use std::io::Read;
