@@ -6,22 +6,20 @@ use std::fs::File;
 use std::io::Read;
 use cpu::Mos6507;
 
+pub type Cartridge = Vec<u8>;
+
 pub struct Atari2600 {
     cpu: Mos6507,
 }
 
 impl Atari2600 {
-    pub fn new(cartridge: Vec<u8>) -> Atari2600 {
+    pub fn new() -> Atari2600 {
         Atari2600 {
-            cpu: Mos6507::new(cartridge),
+            cpu: Mos6507::new(),
         }
     }
 
     pub fn power_on(&self) -> Result<i32,()> {
-        //TODO - emulate turning the Atari on
-        println!("Atari2600: powered on");
-        println!("Atari2600: running program");
-        self.cpu.run();
         Ok(1)
     }
 }
