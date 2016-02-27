@@ -26,7 +26,8 @@ impl Atari2600 {
         }
     }
 
-    pub fn power_on(&self, cartridge: Cartridge) -> Result<i32,()> {
+    pub fn power_on(&mut self, cartridge: Cartridge) -> Result<i32,()> {
+        self.cpu.run(&self.pia, &self.tia, &cartridge);        
         Ok(1)
     }
 }

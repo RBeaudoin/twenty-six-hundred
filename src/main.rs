@@ -16,7 +16,7 @@ fn main() {
                                 .map(|x| x.unwrap())
                                 .collect(); 
      
-    let atari_2600 =  Atari2600::new();
+    let mut atari_2600 =  Atari2600::new();
     let exit_code = atari_2600.power_on(cartridge).unwrap();
     
     println!("Atari2600: Exited with result {}", exit_code);
