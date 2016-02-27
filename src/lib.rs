@@ -15,7 +15,6 @@ pub struct Atari2600 {
     cpu: Mos6507,
     pia: Pia6532,
     tia: Tia1A,
-    cartridge: Cartridge,
 }
 
 impl Atari2600 {
@@ -24,15 +23,10 @@ impl Atari2600 {
             cpu: Mos6507::new(),
             pia: Pia6532::new(),
             tia: Tia1A::new(),
-            cartridge: vec![0],
         }
     }
 
-    pub fn insert_cartridge(&mut self, cartridge: Cartridge) {
-        self.cartridge = cartridge;
-    }
-
-    pub fn power_on(&self) -> Result<i32,()> {
+    pub fn power_on(&self, cartridge: Cartridge) -> Result<i32,()> {
         Ok(1)
     }
 }
