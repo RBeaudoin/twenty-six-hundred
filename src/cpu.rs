@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::Read;
-
 use super::Cartridge;
 use pia::Pia6532;
 use tia::Tia1A;
