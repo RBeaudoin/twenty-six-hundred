@@ -33,9 +33,17 @@ impl Mos6507 {
         loop {
             //Fetch the opcode
             let opcode = self.read_byte(pia, tia, rom, self.pc);
+            self.pc += 1;
 
-            //TODO - begin execution loop
-            break;
+            let operand = self.read_byte(pia, tia, rom, self.pc);
+
+            match opcode {
+                //ADC - Add with carry
+                0x69    => self.adc_immediate(operand),
+                0x65    => self.adc_zero_page(operand),
+                0x75    => self.adc_zero_page_x(operand),
+                _       => panic!("Unrecognized opcode: {}", opcode),
+            }
         }
     }
 
@@ -51,6 +59,38 @@ impl Mos6507 {
 
     fn write(&self, pia: Pia6532, tia: Tia1A, rom: Cartridge, address: u16) {
             //TODO - map address to underlying components
+    }
+
+    fn adc_immediate(&self, operand: u8) {
+    
+    }
+        
+    fn adc_zero_page(&self, operand: u8) {            
+    
+    }
+    
+    fn adc_zero_page_x(&self, operand: u8) {
+    
+    }
+    
+    fn adc_absolute(&self, operand1: u8, operand2: u8) {
+    
+    }
+    
+    fn adc_absolute_x(&self, operand1: u8, operand2: u8) {
+    
+    }
+    
+    fn adc_absolute_y(&self, operand1: u8, operand2: u8) {
+    
+    }
+
+    fn adc_indirect_x(&self, operand: u8) {
+    
+    }
+    
+    fn adc_indirect_y(&self, operand: u8) {
+    
     }
 }
 
