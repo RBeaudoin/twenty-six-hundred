@@ -2,6 +2,11 @@ use super::Cartridge;
 use pia::Pia6532;
 use tia::Tia1A;
 
+const CARRY_MASK: u8 = 0x01;
+const DECIMAL_MASK: u8 = 0x08;
+const OVERFLOW_MASK: u8 = 0x40;
+const NEGATIVE_MASK: u8 = 0x80;
+
 pub struct Mos6507 {
     a: u8,
     x: u8,
@@ -28,17 +33,16 @@ impl Mos6507 {
         self.pc = self.read_word(pia, tia, rom, 0xFFFB);
 
         loop {
-            //Fetch the opcode
+            // fetch the opcode
             let opcode = self.read_byte(pia, tia, rom, self.pc);
+            
+            // fetch the first operand
             self.pc += 1;
-
             let operand = self.read_byte(pia, tia, rom, self.pc);
 
             match opcode {
-                //ADC - Add with carry
+                // ADC - Add with carry
                 0x69    => self.adc_immediate(operand),
-                0x65    => self.adc_zero_page(operand),
-                0x75    => self.adc_zero_page_x(operand),
                 _       => panic!("Unrecognized opcode: {}", opcode),
             }
         }
@@ -57,37 +61,45 @@ impl Mos6507 {
     fn write(&self, pia: Pia6532, tia: Tia1A, rom: Cartridge, address: u16) {
             //TODO - map address to underlying components
     }
-
-    fn adc_immediate(&self, operand: u8) {
     
+    fn carry_flag_value(&self) -> u8 {
+        if CARRY_MASK & self.flags == 0 {0} else {1}
     }
+
+    fn decimal_flag_value(&self) -> u8 {
+        if DECIMAL_MASK & self.flags == 0 {0} else {1}
+    }
+
+    fn set_carry(&mut self) {
+        self.flags = self.flags | CARRY_MASK;
+    }
+
+    fn set_overflow(&mut self) {
+        self.flags = self.flags | OVERFLOW_MASK;
+    }
+
+    fn adc_immediate(&mut self, operand: u8) {
+        // add acc to operand and carry, store in acc
+        // set the carry, overflow, and sign bits accordingly
         
-    fn adc_zero_page(&self, operand: u8) {            
-    
-    }
-    
-    fn adc_zero_page_x(&self, operand: u8) {
-    
-    }
-    
-    fn adc_absolute(&self, operand1: u8, operand2: u8) {
-    
-    }
-    
-    fn adc_absolute_x(&self, operand1: u8, operand2: u8) {
-    
-    }
-    
-    fn adc_absolute_y(&self, operand1: u8, operand2: u8) {
-    
-    }
+        if self.decimal_flag_value() == 1 {
+            // TODO - packed BCD arithmetic is hard...
+        } else {
+            let temp = self.a.wrapping_add(operand.wrapping_add(self.carry_flag_value()));
+            
+            // carry check
+            if self.a > temp {
+                self.set_carry(); // TODO clear if necessary
+            }
 
-    fn adc_indirect_x(&self, operand: u8) {
-    
-    }
-    
-    fn adc_indirect_y(&self, operand: u8) {
-    
+            // overflow check
+            if  (operand as i8).checked_add(self.carry_flag_value() as i8) == None {
+                self.set_overflow(); // TODO - clear if necessary
+            } else if (self.a as i8).checked_add((operand as i8) + (self.carry_flag_value() as i8)) == None {
+                self.set_overflow(); // TODO - clear if necessary
+            }
+            self.a = temp;
+        }
     }
 }
 
@@ -96,7 +108,21 @@ mod tests {
     use super::*;
     
     #[test]
-    fn it_works() {
-        assert_eq!(4, 4);
+    fn adc_immediate() {
+        let mut cpu = Mos6507::new();
+
+        cpu.adc_immediate(1);
+
+        assert_eq!(cpu.a, 1);
+    }
+
+    #[test]
+    fn adc_immediate_with_carry() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = 0x01;
+
+        cpu.adc_immediate(1);
+
+        assert_eq!(cpu.a, 2);
     }
 }
