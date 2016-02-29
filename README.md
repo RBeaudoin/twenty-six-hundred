@@ -12,4 +12,6 @@ This is currently a work-in-progress as I make my way through learning [Rust](ht
 
 ##References
 
-The following are a list of references I used to build this emulator:
+* http://archive.6502.org/datasheets/synertek_programming_manual.pdf
+* http://www.randomterrain.com/atari-2600-memories-tutorial-andrew-davie-01.html
+* http://homepage.cs.uiowa.edu/~jones/bcd/bcd.html#packed
