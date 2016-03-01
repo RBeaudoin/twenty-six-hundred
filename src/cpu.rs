@@ -62,43 +62,35 @@ impl Mos6507 {
             //TODO - map address to underlying components
     }
     
-    fn carry_flag_value(&self) -> u8 {
-        if CARRY_MASK & self.flags == 0 {0} else {1}
+    fn flag_value(&self, mask: u8) -> u8 {
+        if mask & self.flags == 0 {0} else {1}
     }
 
-    fn decimal_flag_value(&self) -> u8 {
-        if DECIMAL_MASK & self.flags == 0 {0} else {1}
-    }
-
-    fn set_carry(&mut self) {
-        self.flags = self.flags | CARRY_MASK;
-    }
-
-    fn set_overflow(&mut self) {
-        self.flags = self.flags | OVERFLOW_MASK;
+    fn set_flag(&mut self, value: bool, mask: u8) {
+        if value {
+            self.flags = self.flags | mask;
+        } else { 
+            self.flags = self.flags & !mask;
+        }
     }
 
     fn adc_immediate(&mut self, operand: u8) {
-        // add acc to operand and carry, store in acc
-        // set the carry, overflow, and sign bits accordingly
         
-        if self.decimal_flag_value() == 1 {
+        if self.flag_value(DECIMAL_MASK) == 1 {
             // TODO - packed BCD arithmetic is hard...
         } else {
-            let temp = self.a.wrapping_add(operand.wrapping_add(self.carry_flag_value()));
+            self.a = self.a.wrapping_add(operand.wrapping_add(self.flag_value(CARRY_MASK)));
+            
+            // use u16 to easily check for carry, overload
+            let wide_result = (self.a as u16) + (self.flag_value(CARRY_MASK) as u16) + (operand as u16); 
             
             // carry check
-            if self.a > temp {
-                self.set_carry(); // TODO clear if necessary
-            }
+            self.set_flag((wide_result > 255), CARRY_MASK);
 
             // overflow check
-            if  (operand as i8).checked_add(self.carry_flag_value() as i8) == None {
-                self.set_overflow(); // TODO - clear if necessary
-            } else if (self.a as i8).checked_add((operand as i8) + (self.carry_flag_value() as i8)) == None {
-                self.set_overflow(); // TODO - clear if necessary
-            }
-            self.a = temp;
+            self.set_flag((wide_result as i16) > 127 || 
+                          (wide_result as i16) < -128,
+                          OVERFLOW_MASK);
         }
     }
 }
@@ -124,5 +116,24 @@ mod tests {
         cpu.adc_immediate(1);
 
         assert_eq!(cpu.a, 2);
+    }
+
+    #[test]
+    fn flag_value() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = 0x01 | 0x08 | 0x40 | 0x80;
+
+        assert_eq!(cpu.flag_value(super::CARRY_MASK), 1);
+        assert_eq!(cpu.flag_value(super::DECIMAL_MASK), 1);
+        assert_eq!(cpu.flag_value(super::OVERFLOW_MASK), 1);
+        assert_eq!(cpu.flag_value(super::NEGATIVE_MASK), 1);
+    }
+
+    #[test]
+    fn set_value() {
+        let mut cpu = Mos6507::new();
+        cpu.set_flag(true, 0x01);
+
+        assert_eq!(cpu.flags, super::CARRY_MASK);
     }
 }
