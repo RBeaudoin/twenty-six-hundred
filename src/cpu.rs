@@ -2,10 +2,13 @@ use super::Cartridge;
 use pia::Pia6532;
 use tia::Tia1A;
 
-const CARRY_MASK: u8 = 0x01;
-const DECIMAL_MASK: u8 = 0x08;
-const OVERFLOW_MASK: u8 = 0x40;
-const NEGATIVE_MASK: u8 = 0x80;
+const CARRY_MASK: u8                = 0x01;
+const ZERO_RESULT_MASK: u8          = 0x02;
+const INTERRUPT_DISABLE_MASK: u8    = 0x04;
+const DECIMAL_MASK: u8              = 0x08;
+const BREAK_COMMAND_MASK: u8        = 0x10;
+const OVERFLOW_MASK: u8             = 0x40;
+const NEGATIVE_MASK: u8             = 0x80;
 
 pub struct Mos6507 {
     a: u8,
@@ -121,10 +124,14 @@ mod tests {
     #[test]
     fn flag_value() {
         let mut cpu = Mos6507::new();
-        cpu.flags = 0x01 | 0x08 | 0x40 | 0x80;
+        cpu.flags = 0x01 | 0x02 | 0x04 | 0x08 |
+                    0x10 | 0x40 | 0x80;
 
         assert_eq!(cpu.flag_value(super::CARRY_MASK), 1);
+        assert_eq!(cpu.flag_value(super::ZERO_RESULT_MASK), 1);
+        assert_eq!(cpu.flag_value(super::INTERRUPT_DISABLE_MASK), 1);
         assert_eq!(cpu.flag_value(super::DECIMAL_MASK), 1);
+        assert_eq!(cpu.flag_value(super::BREAK_COMMAND_MASK), 1);
         assert_eq!(cpu.flag_value(super::OVERFLOW_MASK), 1);
         assert_eq!(cpu.flag_value(super::NEGATIVE_MASK), 1);
     }
@@ -132,8 +139,33 @@ mod tests {
     #[test]
     fn set_value() {
         let mut cpu = Mos6507::new();
+        
         cpu.set_flag(true, 0x01);
+        cpu.set_flag(true, 0x02);
+        cpu.set_flag(true, 0x04);
+        cpu.set_flag(true, 0x08);
+        cpu.set_flag(true, 0x10);
+        cpu.set_flag(true, 0x40);
+        cpu.set_flag(true, 0x80);
+        
+        assert_eq!(cpu.flags,
+                    super::CARRY_MASK | 
+                    super::ZERO_RESULT_MASK |
+                    super::INTERRUPT_DISABLE_MASK | 
+                    super::DECIMAL_MASK | 
+                    super::BREAK_COMMAND_MASK |
+                    super::OVERFLOW_MASK | 
+                    super::NEGATIVE_MASK);
+    
+        
+        cpu.set_flag(false, 0x01);
+        cpu.set_flag(false, 0x02);
+        cpu.set_flag(false, 0x04);
+        cpu.set_flag(false, 0x08);
+        cpu.set_flag(false, 0x10);
+        cpu.set_flag(false, 0x40);
+        cpu.set_flag(false, 0x80);
 
-        assert_eq!(cpu.flags, super::CARRY_MASK);
+        assert_eq!(cpu.flags, 0);
     }
 }
