@@ -45,7 +45,14 @@ impl Mos6507 {
 
             match opcode {
                 // ADC - Add with carry
-                0x69    => self.adc_immediate(operand),
+                0x69    => self.adc(operand),
+                0x65    => println!("TODO: implement ADC zero page"),
+                0x75    => println!("TODO: implement ADC zero page x"),
+                0x6D    => println!("TODO: implement ADC absolute"),
+                0x7D    => println!("TODO: implement ADC absolute x"),
+                0x79    => println!("TODO: implement ADC absolute y"),
+                0x61    => println!("TODO: implement ADC indirect x"),
+                0x71    => println!("TODO: implement ADC indirect y"),
                 _       => panic!("Unrecognized opcode: {}", opcode),
             }
         }
@@ -77,15 +84,14 @@ impl Mos6507 {
         }
     }
 
-    fn adc_immediate(&mut self, operand: u8) {
-        
+    fn adc(&mut self, memory: u8) {
         if self.flag_value(DECIMAL_MASK) == 1 {
             // TODO - packed BCD arithmetic is hard...
         } else {
-            self.a = self.a.wrapping_add(operand.wrapping_add(self.flag_value(CARRY_MASK)));
+            self.a = self.a.wrapping_add(memory.wrapping_add(self.flag_value(CARRY_MASK)));
             
             // use u16 to easily check for carry, overload
-            let wide_result = (self.a as u16) + (self.flag_value(CARRY_MASK) as u16) + (operand as u16); 
+            let wide_result = (self.a as u16) + (self.flag_value(CARRY_MASK) as u16) + (memory as u16); 
             
             // carry check
             self.set_flag((wide_result > 255), CARRY_MASK);
@@ -103,20 +109,20 @@ mod tests {
     use super::*;
     
     #[test]
-    fn adc_immediate() {
+    fn adc() {
         let mut cpu = Mos6507::new();
 
-        cpu.adc_immediate(1);
+        cpu.adc(1);
 
         assert_eq!(cpu.a, 1);
     }
 
     #[test]
-    fn adc_immediate_with_carry() {
+    fn adc_with_carry() {
         let mut cpu = Mos6507::new();
         cpu.flags = 0x01;
 
-        cpu.adc_immediate(1);
+        cpu.adc(1);
 
         assert_eq!(cpu.a, 2);
     }
