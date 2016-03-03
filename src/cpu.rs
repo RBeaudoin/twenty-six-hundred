@@ -36,16 +36,15 @@ impl Mos6507 {
         self.pc = self.read_word(pia, tia, rom, 0xFFFB);
 
         loop {
-            // fetch the opcode
+            // fetch the opcode, preemptively retrieve 
+            // both potential operands
             let opcode = self.read_byte(pia, tia, rom, self.pc);
-            
-            // fetch the first operand
-            self.pc += 1;
-            let operand = self.read_byte(pia, tia, rom, self.pc);
+            let operand_1 = self.read_byte(pia, tia, rom, self.pc + 1);  
+            let operand_2 = self.read_byte(pia, tia, rom, self.pc + 2);  
 
             match opcode {
                 // ADC - Add with carry
-                0x69    => self.adc(operand),
+                0x69    => self.adc(operand_1),
                 0x65    => println!("TODO: implement ADC zero page"),
                 0x75    => println!("TODO: implement ADC zero page x"),
                 0x6D    => println!("TODO: implement ADC absolute"),
@@ -91,7 +90,8 @@ impl Mos6507 {
             self.a = self.a.wrapping_add(memory.wrapping_add(self.flag_value(CARRY_MASK)));
             
             // use u16 to easily check for carry, overload
-            let wide_result = (self.a as u16) + (self.flag_value(CARRY_MASK) as u16) + (memory as u16); 
+            let wide_result = (self.a as u16) 
+                + (self.flag_value(CARRY_MASK) as u16) + (memory as u16); 
             
             // carry check
             self.set_flag((wide_result > 255), CARRY_MASK);
