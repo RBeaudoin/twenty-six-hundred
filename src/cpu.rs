@@ -2,6 +2,7 @@ use super::Cartridge;
 use pia::Pia6532;
 use tia::Tia1A;
 
+// for flags register
 const CARRY_MASK: u8                = 0x01;
 const ZERO_RESULT_MASK: u8          = 0x02;
 const INTERRUPT_DISABLE_MASK: u8    = 0x04;
@@ -9,6 +10,20 @@ const DECIMAL_MASK: u8              = 0x08;
 const BREAK_COMMAND_MASK: u8        = 0x10;
 const OVERFLOW_MASK: u8             = 0x40;
 const NEGATIVE_MASK: u8             = 0x80;
+
+// to extract lower byte from word
+const LOW_BYTE_MASK: u16             = 0xFF;
+
+enum AddressMode {
+    Immediate{oper: u8},
+    ZeroPage{oper: u8},
+    ZeroPageX{oper: u8, x: u8},
+    Absolute{oper: u16},
+    AbsoluteX{oper: u16, x: u8},
+    AbsoluteY{oper: u16, y: u8},
+    IndirectX{oper: u8, x: u8},
+    IndirectY{oper: u8, y: u8},
+}
 
 pub struct Mos6507 {
     a: u8,
@@ -27,50 +42,50 @@ impl Mos6507 {
             y: 0u8,
             sp: 0u8,
             pc: 0u16,
-            flags: 0u8, //TODO - set flags to appropriate defaults
+            flags: 0u8,
         }
     }
 
     pub fn run(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) {
         // begin execution from the RESET vector in rom 0xFFFC-0xFFFB
-        self.pc = self.read_word(pia, tia, rom, 0xFFFB);
+        self.pc = read_word(pia, tia, rom, 0xFFFB);
 
         loop {
-            // fetch the opcode, preemptively retrieve 
-            // both potential operands
-            let opcode = self.read_byte(pia, tia, rom, self.pc);
-            let operand_1 = self.read_byte(pia, tia, rom, self.pc + 1);  
-            let operand_2 = self.read_byte(pia, tia, rom, self.pc + 2);  
-
-            match opcode {
-                // ADC - Add with carry
-                0x69    => self.adc(operand_1),
-                0x65    => println!("TODO: implement ADC zero page"),
-                0x75    => println!("TODO: implement ADC zero page x"),
-                0x6D    => println!("TODO: implement ADC absolute"),
-                0x7D    => println!("TODO: implement ADC absolute x"),
-                0x79    => println!("TODO: implement ADC absolute y"),
-                0x61    => println!("TODO: implement ADC indirect x"),
-                0x71    => println!("TODO: implement ADC indirect y"),
-                _       => panic!("Unrecognized opcode: {}", opcode),
-            }
+           self.pc = self.execute_instruction(pia, tia, rom);
+           // TODO - handle interupts
         }
     }
 
-    fn read_word(&self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u16 {
-        //TODO - retrieve two bytes from the supplied address
+    fn execute_instruction(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) -> u16 {
+        let opcode = read_byte(pia, tia, rom, &AddressMode::Absolute{oper: self.pc});
+        let next_word = read_word(pia, tia, rom, self.pc + 1); 
+        let next_byte = (next_word & LOW_BYTE_MASK) as u8;  
+        let x = self.x;
+        let y = self.y;
+
+        match opcode {
+                // ADC - Add with carry
+                0x69    => self.adc(read_byte(pia, tia, rom, &AddressMode::Immediate{oper: next_byte})),
+                0x65    => self.adc(read_byte(pia, tia, rom, &AddressMode::ZeroPage{oper: next_byte})),
+                0x75    => self.adc(read_byte(pia, tia, rom, &AddressMode::ZeroPageX{oper: next_byte, x: x})),
+                0x6D    => self.adc(read_byte(pia, tia, rom, &AddressMode::Absolute{oper: next_word})),
+                0x7D    => self.adc(read_byte(pia, tia, rom, &AddressMode::AbsoluteX{oper:
+                    next_word, x: x})),
+                0x79    => self.adc(read_byte(pia, tia, rom, &AddressMode::AbsoluteY{oper:
+                    next_word, y: y})),
+                0x61    => self.adc(read_byte(pia, tia, rom, &AddressMode::IndirectX{oper:
+                    next_byte, x: x})),
+                0x71    => self.adc(read_byte(pia, tia, rom, &AddressMode::IndirectY{oper:
+                    next_byte, y: y})),
+                _       => panic!("Unrecognized opcode: {}", opcode),
+            }
+
+        //TODO - need to make the return value the new pc value
         0
+
     }
 
-    fn read_byte(&self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u8 {
-            //TODO map address to underlying components
-            0
-    }
 
-    fn write(&self, pia: Pia6532, tia: Tia1A, rom: Cartridge, address: u16) {
-            //TODO - map address to underlying components
-    }
-    
     fn flag_value(&self, mask: u8) -> u8 {
         if mask & self.flags == 0 {0} else {1}
     }
@@ -81,9 +96,10 @@ impl Mos6507 {
         } else { 
             self.flags = self.flags & !mask;
         }
-    }
+    } 
 
     fn adc(&mut self, memory: u8) {
+        
         if self.flag_value(DECIMAL_MASK) == 1 {
             // TODO - packed BCD arithmetic is hard...
         } else {
@@ -102,6 +118,22 @@ impl Mos6507 {
                           OVERFLOW_MASK);
         }
     }
+}
+
+fn read_word(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u16 {
+    let low_byte = read_byte(pia, tia, rom, &AddressMode::Absolute{oper: address}) as u16;
+    let high_byte = read_byte(pia, tia, rom, &AddressMode::Absolute{oper: address + 1}) as u16;
+    (high_byte << 8) + low_byte
+    
+}
+
+fn read_byte(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: &AddressMode) -> u8 {
+    //TODO map address to underlying components
+    0
+}
+
+fn write(pia: Pia6532, tia: Tia1A, rom: Cartridge, address: &AddressMode, data: u8) {
+    //TODO - map address to underlying components
 }
 
 #[cfg(test)]
