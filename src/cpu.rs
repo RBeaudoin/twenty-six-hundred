@@ -57,34 +57,43 @@ impl Mos6507 {
     }
 
     fn execute_instruction(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) -> u16 {
-        let opcode = read_byte(pia, tia, rom, &AddressMode::Absolute{oper: self.pc});
+        // TODO - I'd like to rework most of this to do the following:
+        // 1. Grab the opcode
+        // 2. Determine the addressing mode (via 'match'?)
+        // 3. Retrieve the necessary bytes for the opcode
+        // 4. Increment pc based on #3
+        // 5. Execute instruction
+        
+        let opcode = read_byte(pia, tia, rom, AddressMode::Absolute{oper: self.pc});
         let next_word = read_word(pia, tia, rom, self.pc + 1); 
         let next_byte = (next_word & LOW_BYTE_MASK) as u8;  
+        
+        // Struggling with Rust here a bit as I have to do this if
+        // I want to pass the x, y index register values below
         let x = self.x;
         let y = self.y;
 
+
         match opcode {
                 // ADC - Add with carry
-                0x69    => self.adc(read_byte(pia, tia, rom, &AddressMode::Immediate{oper: next_byte})),
-                0x65    => self.adc(read_byte(pia, tia, rom, &AddressMode::ZeroPage{oper: next_byte})),
-                0x75    => self.adc(read_byte(pia, tia, rom, &AddressMode::ZeroPageX{oper: next_byte, x: x})),
-                0x6D    => self.adc(read_byte(pia, tia, rom, &AddressMode::Absolute{oper: next_word})),
-                0x7D    => self.adc(read_byte(pia, tia, rom, &AddressMode::AbsoluteX{oper:
+                0x69    => self.adc(read_byte(pia, tia, rom, AddressMode::Immediate{oper: next_byte})),
+                0x65    => self.adc(read_byte(pia, tia, rom, AddressMode::ZeroPage{oper: next_byte})),
+                0x75    => self.adc(read_byte(pia, tia, rom, AddressMode::ZeroPageX{oper: next_byte, x: x})),
+                0x6D    => self.adc(read_byte(pia, tia, rom, AddressMode::Absolute{oper: next_word})),
+                0x7D    => self.adc(read_byte(pia, tia, rom, AddressMode::AbsoluteX{oper:
                     next_word, x: x})),
-                0x79    => self.adc(read_byte(pia, tia, rom, &AddressMode::AbsoluteY{oper:
+                0x79    => self.adc(read_byte(pia, tia, rom, AddressMode::AbsoluteY{oper:
                     next_word, y: y})),
-                0x61    => self.adc(read_byte(pia, tia, rom, &AddressMode::IndirectX{oper:
+                0x61    => self.adc(read_byte(pia, tia, rom, AddressMode::IndirectX{oper:
                     next_byte, x: x})),
-                0x71    => self.adc(read_byte(pia, tia, rom, &AddressMode::IndirectY{oper:
+                0x71    => self.adc(read_byte(pia, tia, rom, AddressMode::IndirectY{oper:
                     next_byte, y: y})),
                 _       => panic!("Unrecognized opcode: {}", opcode),
             }
 
         //TODO - need to make the return value the new pc value
         0
-
     }
-
 
     fn flag_value(&self, mask: u8) -> u8 {
         if mask & self.flags == 0 {0} else {1}
@@ -121,18 +130,18 @@ impl Mos6507 {
 }
 
 fn read_word(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u16 {
-    let low_byte = read_byte(pia, tia, rom, &AddressMode::Absolute{oper: address}) as u16;
-    let high_byte = read_byte(pia, tia, rom, &AddressMode::Absolute{oper: address + 1}) as u16;
+    let low_byte = read_byte(pia, tia, rom, AddressMode::Absolute{oper: address}) as u16;
+    let high_byte = read_byte(pia, tia, rom, AddressMode::Absolute{oper: address + 1}) as u16;
     (high_byte << 8) + low_byte
     
 }
 
-fn read_byte(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: &AddressMode) -> u8 {
+fn read_byte(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: AddressMode) -> u8 {
     //TODO map address to underlying components
     0
 }
 
-fn write(pia: Pia6532, tia: Tia1A, rom: Cartridge, address: &AddressMode, data: u8) {
+fn write(pia: Pia6532, tia: Tia1A, rom: Cartridge, address: AddressMode, data: u8) {
     //TODO - map address to underlying components
 }
 
