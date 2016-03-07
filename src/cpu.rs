@@ -51,48 +51,69 @@ impl Mos6507 {
         self.pc = read_word(pia, tia, rom, 0xFFFB);
 
         loop {
-           self.pc = self.execute_instruction(pia, tia, rom);
+           self.execute_instruction(pia, tia, rom);
            // TODO - handle interupts
         }
     }
 
-    fn execute_instruction(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) -> u16 {
-        // TODO - I'd like to rework most of this to do the following:
-        // 1. Grab the opcode
-        // 2. Determine the addressing mode (via 'match'?)
-        // 3. Retrieve the necessary bytes for the opcode
-        // 4. Increment pc based on #3
-        // 5. Execute instruction
-        
+    fn execute_instruction(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) {
         let opcode = read_byte(pia, tia, rom, AddressMode::Absolute{oper: self.pc});
-        let next_word = read_word(pia, tia, rom, self.pc + 1); 
-        let next_byte = (next_word & LOW_BYTE_MASK) as u8;  
-        
-        // Struggling with Rust here a bit as I have to do this if
-        // I want to pass the x, y index register values below
-        let x = self.x;
-        let y = self.y;
 
-
+        // TODO - as other opcodes are added I'll want to
+        // add another level of match inside this one, with
+        // this level handling address mode and fetch, and
+        // the inner level calling the func that exeutes the instruction
         match opcode {
-                // ADC - Add with carry
-                0x69    => self.adc(read_byte(pia, tia, rom, AddressMode::Immediate{oper: next_byte})),
-                0x65    => self.adc(read_byte(pia, tia, rom, AddressMode::ZeroPage{oper: next_byte})),
-                0x75    => self.adc(read_byte(pia, tia, rom, AddressMode::ZeroPageX{oper: next_byte, x: x})),
-                0x6D    => self.adc(read_byte(pia, tia, rom, AddressMode::Absolute{oper: next_word})),
-                0x7D    => self.adc(read_byte(pia, tia, rom, AddressMode::AbsoluteX{oper:
-                    next_word, x: x})),
-                0x79    => self.adc(read_byte(pia, tia, rom, AddressMode::AbsoluteY{oper:
-                    next_word, y: y})),
-                0x61    => self.adc(read_byte(pia, tia, rom, AddressMode::IndirectX{oper:
-                    next_byte, x: x})),
-                0x71    => self.adc(read_byte(pia, tia, rom, AddressMode::IndirectY{oper:
-                    next_byte, y: y})),
-                _       => panic!("Unrecognized opcode: {}", opcode),
-            }
-
-        //TODO - need to make the return value the new pc value
-        0
+            0x69    => {
+                let next_byte = read_byte(pia,tia,rom,AddressMode::Absolute{oper: self.pc + 1});
+                let address_mode = AddressMode::Immediate{oper: next_byte};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 1;
+            },
+            0x65    => {
+                let next_byte = read_byte(pia,tia,rom,AddressMode::Absolute{oper: self.pc + 1});
+                let address_mode = AddressMode::ZeroPage{oper: next_byte};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 1;
+            },
+            0x75    => {
+                let next_byte = read_byte(pia,tia,rom,AddressMode::Absolute{oper: self.pc + 1});
+                let address_mode = AddressMode::ZeroPageX{oper: next_byte, x: self.x};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 1;
+            },
+            0x6D    => {
+                let next_word = read_word(pia,tia,rom,self.pc + 1);
+                let address_mode = AddressMode::Absolute{oper: next_word};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 2; 
+            },
+            0x7D    => {
+                let next_word = read_word(pia,tia,rom,self.pc + 1);
+                let address_mode = AddressMode::AbsoluteX{oper: next_word, x: self.x};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 2; 
+            },
+            0x79    => {
+                let next_word = read_word(pia,tia,rom,self.pc + 1);
+                let address_mode = AddressMode::AbsoluteY{oper: next_word, y: self.y};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 2;
+            },
+            0x61    => {
+                let next_byte = read_byte(pia,tia,rom,AddressMode::Absolute{oper: self.pc + 1});
+                let address_mode = AddressMode::IndirectX{oper: next_byte, x: self.x};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 1; 
+            },
+            0x71    => {
+                let next_byte = read_byte(pia,tia,rom,AddressMode::Absolute{oper: self.pc + 1});
+                let address_mode = AddressMode::IndirectY{oper: next_byte, y: self.y};
+                self.adc(read_byte(pia,tia,rom,address_mode));
+                self.pc += 1; 
+            },
+            _       => panic!("Unknown opcode {}", opcode),
+        }
     }
 
     fn flag_value(&self, mask: u8) -> u8 {
