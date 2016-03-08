@@ -1,4 +1,4 @@
-#Twenty Six
+#Twenty Six Hundred
 
 An Atari 2600 emulator in [Rust](https://www.rust-lang.org/)
 
@@ -20,3 +20,7 @@ The following references were invaluable resources, and their authors deserve a 
 * [Synertek Hardware Manual](http://archive.6502.org/datasheets/synertek_hardware_manual.pdf)
 * [Atari 2600 Programming for Newbies](http://www.randomterrain.com/atari-2600-memories-tutorial-andrew-davie-01.html)
 * [Packed BCD Arithmetic](http://homepage.cs.uiowa.edu/~jones/bcd/bcd.html#packed)
+
+##License
+
+MIT
