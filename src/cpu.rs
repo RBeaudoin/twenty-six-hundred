@@ -116,8 +116,8 @@ impl Mos6507 {
         }
     }
 
-    fn flag_value(&self, mask: u8) -> u8 {
-        if mask & self.flags == 0 {0} else {1}
+    fn flag_set(&self, mask: u8) -> bool {
+        mask & self.flags > 0
     }
 
     fn set_flag(&mut self, value: bool, mask: u8) {
@@ -128,16 +128,17 @@ impl Mos6507 {
         }
     } 
 
-    fn adc(&mut self, memory: u8) {
-        
-        if self.flag_value(DECIMAL_MASK) == 1 {
+    fn adc(&mut self, operand: u8) {
+        let carry = CARRY_MASK & self.flags;
+
+        if self.flag_set(DECIMAL_MASK) {
             // TODO - packed BCD arithmetic is hard...
         } else {
-            self.a = self.a.wrapping_add(memory.wrapping_add(self.flag_value(CARRY_MASK)));
+            let temp = self.a.wrapping_add(operand.wrapping_add(carry));
             
             // use u16 to easily check for carry, overload
             let wide_result = (self.a as u16) 
-                + (self.flag_value(CARRY_MASK) as u16) + (memory as u16); 
+                            + (carry as u16) + (operand as u16); 
             
             // carry check
             self.set_flag((wide_result > 255), CARRY_MASK);
@@ -146,6 +147,8 @@ impl Mos6507 {
             self.set_flag((wide_result as i16) > 127 || 
                           (wide_result as i16) < -128,
                           OVERFLOW_MASK);
+            
+            self.a = temp;
         }
     }
 }
@@ -188,20 +191,46 @@ mod tests {
 
         assert_eq!(cpu.a, 2);
     }
+    
+    #[test]
+    fn adc_with_set_cary_flag() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 255;
 
+        cpu.adc(1);
+
+        assert_eq!(cpu.a, 0);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+    }
+    
     #[test]
     fn flag_value() {
         let mut cpu = Mos6507::new();
         cpu.flags = 0x01 | 0x02 | 0x04 | 0x08 |
                     0x10 | 0x40 | 0x80;
-
-        assert_eq!(cpu.flag_value(super::CARRY_MASK), 1);
-        assert_eq!(cpu.flag_value(super::ZERO_RESULT_MASK), 1);
-        assert_eq!(cpu.flag_value(super::INTERRUPT_DISABLE_MASK), 1);
-        assert_eq!(cpu.flag_value(super::DECIMAL_MASK), 1);
-        assert_eq!(cpu.flag_value(super::BREAK_COMMAND_MASK), 1);
-        assert_eq!(cpu.flag_value(super::OVERFLOW_MASK), 1);
-        assert_eq!(cpu.flag_value(super::NEGATIVE_MASK), 1);
+        
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+        assert_eq!(cpu.flag_set(super::INTERRUPT_DISABLE_MASK), true);
+        assert_eq!(cpu.flag_set(super::DECIMAL_MASK), true);
+        assert_eq!(cpu.flag_set(super::BREAK_COMMAND_MASK), true);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+    }
+   
+    #[test]
+    fn flag_value_mixed() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = 0x01 | 0x04 |
+                    0x10 | 0x80;
+        
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+        assert_eq!(cpu.flag_set(super::INTERRUPT_DISABLE_MASK), true);
+        assert_eq!(cpu.flag_set(super::DECIMAL_MASK), false);
+        assert_eq!(cpu.flag_set(super::BREAK_COMMAND_MASK), true);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
     }
 
     #[test]
