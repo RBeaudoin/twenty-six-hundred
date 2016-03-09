@@ -12,7 +12,11 @@ const OVERFLOW_MASK: u8             = 0x40;
 const NEGATIVE_MASK: u8             = 0x80;
 
 // to extract lower byte from word
-const LOW_BYTE_MASK: u16             = 0xFF;
+const LOW_BYTE_MASK: u16            = 0xFF;
+
+// to extract nibbles for BCD operations
+const LOW_NIBBLE_MASK: u8           = 0x0F;
+const HIGH_NIBBLE_MASK: u8          = 0xF0;
 
 enum AddressMode {
     Immediate{oper: u8},
@@ -126,7 +130,47 @@ impl Mos6507 {
         let carry = CARRY_MASK & self.flags;
 
         if self.flag_set(DECIMAL_MASK) {
-            // TODO - packed BCD arithmetic is hard...
+            let low_nibble;
+            let high_nibble;
+            let mut nibble_carry;
+
+            // TODO - do I need to validate the nibbles? What does
+            // the 6507 do when it has invalid BCD operands?
+
+            // TODO - I can probably optimize this later
+            let mut temp = (LOW_NIBBLE_MASK & self.a) + (LOW_NIBBLE_MASK & operand) + carry;
+            println!("temp 1 is: {}", temp); 
+            if temp <= 9 
+            {
+                low_nibble = temp;
+                nibble_carry = 0;
+            } else 
+            {
+                low_nibble = (temp + 6) & LOW_NIBBLE_MASK; // BCD correction by adding 6
+                nibble_carry = 1;
+            };
+            println!("low nibble is: {}", low_nibble); 
+
+            temp = (self.a >> 4) + (operand >> 4) + nibble_carry;
+            println!("temp 2 is: {}", temp); 
+            
+            if temp <= 9 
+            {
+                high_nibble = temp;
+                nibble_carry = 0;
+            } else 
+            {
+                high_nibble = (temp + 6) & LOW_NIBBLE_MASK; // BCD correction by adding 6
+                nibble_carry = 1;
+            };
+            
+            println!("high nibble is: {}", high_nibble); 
+            
+            // carry check
+            self.set_flag(nibble_carry == 1, CARRY_MASK);
+
+            self.a = (high_nibble << 4) | low_nibble;
+        
         } else {
             let temp = self.a.wrapping_add(operand.wrapping_add(carry));
             
@@ -187,7 +231,7 @@ mod tests {
     }
     
     #[test]
-    fn adc_with_set_cary_flag() {
+    fn adc_set_carry_flag() {
         let mut cpu = Mos6507::new();
         cpu.a = 255;
 
@@ -196,7 +240,55 @@ mod tests {
         assert_eq!(cpu.a, 0);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
     }
+   
+    #[test]
+    fn adc_set_overflow_flag() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 127;
+
+        cpu.adc(1);
+
+        assert_eq!(cpu.a, 128);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), true);
+    }
+   
+     #[test]
+    fn adc_decimal() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = 0x08;
+        cpu.a = 17; // '11' in BCD
+
+        cpu.adc(35); // '23' in BCD
+
+        assert_eq!(cpu.a, 52); // '34' in BCD
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+    }
     
+    #[test]
+    fn adc_decimal_one_column_carry() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = 0x08;
+        cpu.a = 53; // '35' in BCD
+
+        cpu.adc(38); // '26' in BCD
+
+        assert_eq!(cpu.a, 97); // '61' in BCD
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+    }
+
+    #[test]
+    fn adc_decimal_set_carry_flag() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = 0x08;
+        cpu.a = 71; // '47' in BCD
+
+        cpu.adc(83); // '53' in BCD
+
+        assert_eq!(cpu.a, 0); // '00' in BCD
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+    }
+
+
     #[test]
     fn flag_value() {
         let mut cpu = Mos6507::new();

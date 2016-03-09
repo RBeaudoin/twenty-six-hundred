@@ -20,6 +20,7 @@ The following references were invaluable resources, and their authors deserve a 
 * [Synertek Hardware Manual](http://archive.6502.org/datasheets/synertek_hardware_manual.pdf)
 * [Atari 2600 Programming for Newbies](http://www.randomterrain.com/atari-2600-memories-tutorial-andrew-davie-01.html)
 * [Packed BCD Arithmetic](http://homepage.cs.uiowa.edu/~jones/bcd/bcd.html#packed)
+* [6502 Tutorials - BCD](http://www.6502.org/tutorials/decimal_mode.html)
 
 ##License
 
