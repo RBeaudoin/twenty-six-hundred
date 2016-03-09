@@ -16,7 +16,6 @@ const LOW_BYTE_MASK: u16            = 0xFF;
 
 // to extract nibbles for BCD operations
 const LOW_NIBBLE_MASK: u8           = 0x0F;
-const HIGH_NIBBLE_MASK: u8          = 0xF0;
 
 enum AddressMode {
     Immediate{oper: u8},
@@ -139,7 +138,7 @@ impl Mos6507 {
 
             // TODO - I can probably optimize this later
             let mut temp = (LOW_NIBBLE_MASK & self.a) + (LOW_NIBBLE_MASK & operand) + carry;
-            println!("temp 1 is: {}", temp); 
+            
             if temp <= 9 
             {
                 low_nibble = temp;
@@ -149,10 +148,8 @@ impl Mos6507 {
                 low_nibble = (temp + 6) & LOW_NIBBLE_MASK; // BCD correction by adding 6
                 nibble_carry = 1;
             };
-            println!("low nibble is: {}", low_nibble); 
 
             temp = (self.a >> 4) + (operand >> 4) + nibble_carry;
-            println!("temp 2 is: {}", temp); 
             
             if temp <= 9 
             {
@@ -163,8 +160,6 @@ impl Mos6507 {
                 high_nibble = (temp + 6) & LOW_NIBBLE_MASK; // BCD correction by adding 6
                 nibble_carry = 1;
             };
-            
-            println!("high nibble is: {}", high_nibble); 
             
             // carry check
             self.set_flag(nibble_carry == 1, CARRY_MASK);
@@ -218,6 +213,7 @@ mod tests {
         cpu.adc(1);
 
         assert_eq!(cpu.a, 1);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
     }
 
     #[test]
@@ -228,6 +224,7 @@ mod tests {
         cpu.adc(1);
 
         assert_eq!(cpu.a, 2);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
     }
     
     #[test]
