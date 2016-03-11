@@ -64,49 +64,70 @@ impl Mos6507 {
         let next_word = read_word(pia,tia,rom,self.pc + 1);
         let next_byte = (next_word & LOW_BYTE_MASK) as u8;  
 
-        // TODO - as other opcodes are added I'll want to
-        // add another level of match inside this one, with
-        // this level handling address mode and fetch, and
-        // the inner level calling the func that exeutes the instruction
+        // outer match for address mode
         match opcode {
             0x69    => {
                 let address_mode = AddressMode::Immediate{oper: next_byte};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x69    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 1;
             },
             0x65    => {
                 let address_mode = AddressMode::ZeroPage{oper: next_byte};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x65    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 1;
             },
             0x75    => {
                 let address_mode = AddressMode::ZeroPageX{oper: next_byte, x: self.x};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x75    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 1;
             },
             0x6D    => {
                 let address_mode = AddressMode::Absolute{oper: next_word};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x6D    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 2; 
             },
             0x7D    => {
                 let address_mode = AddressMode::AbsoluteX{oper: next_word, x: self.x};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x7D    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 2; 
             },
             0x79    => {
                 let address_mode = AddressMode::AbsoluteY{oper: next_word, y: self.y};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x79    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 2;
             },
             0x61    => {
                 let address_mode = AddressMode::IndirectX{oper: next_byte, x: self.x};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x61    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 1; 
             },
             0x71    => {
                 let address_mode = AddressMode::IndirectY{oper: next_byte, y: self.y};
-                self.adc(read_byte(pia,tia,rom,address_mode));
+                match opcode {
+                    0x71    => self.adc(read_byte(pia,tia,rom,address_mode)),
+                    _       => panic!("Unimplemented opcode: {}", opcode),
+                }
                 self.pc += 1; 
             },
             _       => panic!("Unknown opcode {}", opcode),
