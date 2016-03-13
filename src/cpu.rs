@@ -204,6 +204,14 @@ impl Mos6507 {
             
             self.a = temp;
         }
+        
+        let temp = self.a;
+
+        // negative check
+        self.set_flag((temp >> 7) == 1, NEGATIVE_MASK);
+
+        // zero check
+        self.set_flag(temp == 0, ZERO_RESULT_MASK);
     }
 }
 
@@ -234,7 +242,10 @@ mod tests {
         cpu.adc(1);
 
         assert_eq!(cpu.a, 1);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     }
 
     #[test]
@@ -245,22 +256,28 @@ mod tests {
         cpu.adc(1);
 
         assert_eq!(cpu.a, 2);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     }
     
     #[test]
-    fn adc_set_carry_flag() {
+    fn adc_carry_flag_zero_flag() {
         let mut cpu = Mos6507::new();
         cpu.a = 255;
 
         cpu.adc(1);
 
         assert_eq!(cpu.a, 0);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), true);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
     }
    
     #[test]
-    fn adc_set_overflow_flag() {
+    fn adc_overflow_flag_negative_flag() {
         let mut cpu = Mos6507::new();
         cpu.a = 127;
 
@@ -268,6 +285,9 @@ mod tests {
 
         assert_eq!(cpu.a, 128);
         assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), true);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     }
    
      #[test]
@@ -279,7 +299,10 @@ mod tests {
         cpu.adc(35); // '23' in BCD
 
         assert_eq!(cpu.a, 52); // '34' in BCD
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     }
     
     #[test]
@@ -291,11 +314,14 @@ mod tests {
         cpu.adc(38); // '26' in BCD
 
         assert_eq!(cpu.a, 97); // '61' in BCD
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     }
 
     #[test]
-    fn adc_decimal_set_carry_flag() {
+    fn adc_decimal_carry_flag_zero_flag() {
         let mut cpu = Mos6507::new();
         cpu.flags = 0x08;
         cpu.a = 71; // '47' in BCD
@@ -303,9 +329,11 @@ mod tests {
         cpu.adc(83); // '53' in BCD
 
         assert_eq!(cpu.a, 0); // '00' in BCD
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
         assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
     }
-
 
     #[test]
     fn flag_value() {
