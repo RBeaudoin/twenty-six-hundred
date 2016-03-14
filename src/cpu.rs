@@ -18,14 +18,15 @@ const LOW_BYTE_MASK: u16            = 0xFF;
 const LOW_NIBBLE_MASK: u8           = 0x0F;
 
 enum AddressMode {
-    Immediate{oper: u8},
-    ZeroPage{oper: u8},
-    ZeroPageX{oper: u8, x: u8},
-    Absolute{oper: u16},
-    AbsoluteX{oper: u16, x: u8},
-    AbsoluteY{oper: u16, y: u8},
-    IndirectX{oper: u8, x: u8},
-    IndirectY{oper: u8, y: u8},
+    Immediate,
+    ZeroPage,
+    ZeroPageX,
+    Absolute,
+    AbsoluteX,
+    AbsoluteY,
+    IndirectX,
+    IndirectY,
+    None
 }
 
 pub struct Mos6507 {
@@ -51,7 +52,7 @@ impl Mos6507 {
 
     pub fn run(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) {
         // begin execution from the RESET vector in rom 0xFFFC-0xFFFB
-        self.pc = read_word(pia, tia, rom, 0xFFFB);
+        self.pc = self.read_word(pia, tia, rom, 0xFFFB);
 
         loop {
            self.execute_instruction(pia, tia, rom);
@@ -60,78 +61,21 @@ impl Mos6507 {
     }
 
     fn execute_instruction(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) {
-        let opcode = read_byte(pia, tia, rom, AddressMode::Absolute{oper: self.pc});
-        let next_word = read_word(pia,tia,rom,self.pc + 1);
-        let next_byte = (next_word & LOW_BYTE_MASK) as u8;  
+        let opcode = self.read_byte(pia, tia, rom, &AddressMode::Absolute);
+        let address_mode = self.get_address_mode(opcode); 
 
         // outer match for address mode
         match opcode {
-            0x69    => {
-                let address_mode = AddressMode::Immediate{oper: next_byte};
-                match opcode {
-                    0x69    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 1;
-            },
-            0x65    => {
-                let address_mode = AddressMode::ZeroPage{oper: next_byte};
-                match opcode {
-                    0x65    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 1;
-            },
-            0x75    => {
-                let address_mode = AddressMode::ZeroPageX{oper: next_byte, x: self.x};
-                match opcode {
-                    0x75    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 1;
-            },
-            0x6D    => {
-                let address_mode = AddressMode::Absolute{oper: next_word};
-                match opcode {
-                    0x6D    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 2; 
-            },
-            0x7D    => {
-                let address_mode = AddressMode::AbsoluteX{oper: next_word, x: self.x};
-                match opcode {
-                    0x7D    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 2; 
-            },
-            0x79    => {
-                let address_mode = AddressMode::AbsoluteY{oper: next_word, y: self.y};
-                match opcode {
-                    0x79    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 2;
-            },
-            0x61    => {
-                let address_mode = AddressMode::IndirectX{oper: next_byte, x: self.x};
-                match opcode {
-                    0x61    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 1; 
-            },
-            0x71    => {
-                let address_mode = AddressMode::IndirectY{oper: next_byte, y: self.y};
-                match opcode {
-                    0x71    => self.adc(read_byte(pia,tia,rom,address_mode)),
-                    _       => panic!("Unimplemented opcode: {}", opcode),
-                }
-                self.pc += 1; 
+            // ADC
+            0x69 | 0x65 | 0x75 | 0x6D |
+            0x7D | 0x79 | 0x61 | 0x71    => {
+                let operand = self.read_byte(pia, tia, rom, &address_mode);
+                self.adc(operand);
             },
             _       => panic!("Unknown opcode {}", opcode),
         }
+
+        self.pc += self.get_pc_offset(address_mode);
     }
 
     fn flag_set(&self, mask: u8) -> bool {
@@ -146,7 +90,52 @@ impl Mos6507 {
         }
     } 
 
+    fn get_address_mode(&self, opcode: u8) -> AddressMode {
+        match opcode {
+            0x69    => AddressMode::Immediate,
+            0x65    => AddressMode::ZeroPage,
+            0x75    => AddressMode::ZeroPageX,
+            0x6D    => AddressMode::Absolute,
+            0x7D    => AddressMode::AbsoluteX,
+            0x79    => AddressMode::AbsoluteY,
+            0x61    => AddressMode::IndirectX,
+            0x71    => AddressMode::IndirectY,
+            _       => AddressMode::None,
+        }
+    }
+
+    fn get_pc_offset(&self, address_mode: AddressMode) -> u16 {
+        match address_mode {
+            AddressMode::Absolute   |
+            AddressMode::AbsoluteX  | 
+            AddressMode::AbsoluteY      => 3,
+            AddressMode::None           => 1,
+            _                           => 2,
+        }
+    }
+
+    fn read_word(&self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u16 {
+        let low_byte = self.read_byte_by_addr(pia, tia, rom, address) as u16;
+        let high_byte = self.read_byte_by_addr(pia, tia, rom, address + 1) as u16;
+        (high_byte << 8) + low_byte
+    }
+
+    fn read_byte(&self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address_mode: &AddressMode) -> u8 {
+        //TODO map address to underlying components
+        0
+    }
+    
+    fn read_byte_by_addr(&self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u8 {
+        //TODO map address to underlying components
+        0
+    }
+    
+    fn write(&self, pia: Pia6532, tia: Tia1A, rom: Cartridge, address: AddressMode, data: u8) {
+        //TODO - map address to underlying components
+    }
+ 
     fn adc(&mut self, operand: u8) {
+        
         let carry = CARRY_MASK & self.flags;
 
         if self.flag_set(DECIMAL_MASK) {
@@ -215,21 +204,6 @@ impl Mos6507 {
     }
 }
 
-fn read_word(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: u16) -> u16 {
-    let low_byte = read_byte(pia, tia, rom, AddressMode::Absolute{oper: address}) as u16;
-    let high_byte = read_byte(pia, tia, rom, AddressMode::Absolute{oper: address + 1}) as u16;
-    (high_byte << 8) + low_byte
-    
-}
-
-fn read_byte(pia: &Pia6532, tia: &Tia1A, rom: &Cartridge, address: AddressMode) -> u8 {
-    //TODO map address to underlying components
-    0
-}
-
-fn write(pia: Pia6532, tia: Tia1A, rom: Cartridge, address: AddressMode, data: u8) {
-    //TODO - map address to underlying components
-}
 
 #[cfg(test)]
 mod tests {
