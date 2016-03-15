@@ -26,6 +26,8 @@ enum AddressMode {
     AbsoluteY,
     IndirectX,
     IndirectY,
+    Relative,
+    Accumulator,
     None
 }
 
@@ -72,10 +74,15 @@ impl Mos6507 {
             0x7D | 0x79 | 0x61 | 0x71    => {
                 self.adc(operand);
             },
-            // ADD
+            // AND
             0x29 | 0x25 | 0x35 | 0x2D |
             0x3D | 0x39 | 0x21 | 0x31   => {
                 self.and(operand);
+            },
+            // ASL
+            0x0A | 0x06 | 0x16 | 0x0E |
+            0x1E                        => {
+                self.asl(operand);
             },
             _       => panic!("Unknown opcode {}", opcode),
         }
@@ -97,15 +104,25 @@ impl Mos6507 {
 
     fn get_address_mode(&self, opcode: u8) -> AddressMode {
         match opcode {
-            0x69 | 0x29     => AddressMode::Immediate,
-            0x65 | 0x25     => AddressMode::ZeroPage,
-            0x75 | 0x35     => AddressMode::ZeroPageX,
-            0x6D | 0x2D     => AddressMode::Absolute,
-            0x7D | 0x3D     => AddressMode::AbsoluteX,
-            0x79 | 0x39     => AddressMode::AbsoluteY,
-            0x61 | 0x21     => AddressMode::IndirectX,
-            0x71 | 0x31     => AddressMode::IndirectY,
-            _               => AddressMode::None,
+            0x69 | 0x29     
+                => AddressMode::Immediate,
+            0x65 | 0x25 | 0x06
+                => AddressMode::ZeroPage,
+            0x75 | 0x35 | 0x16
+                => AddressMode::ZeroPageX,
+            0x6D | 0x2D | 0x0E
+                => AddressMode::Absolute,
+            0x7D | 0x3D | 0x1E
+                => AddressMode::AbsoluteX,
+            0x79 | 0x39     
+                => AddressMode::AbsoluteY,
+            0x61 | 0x21     
+                => AddressMode::IndirectX,
+            0x71 | 0x31     
+                => AddressMode::IndirectY,
+            0x0A
+                => AddressMode::Accumulator,
+            _   => AddressMode::None,
         }
     }
 
@@ -139,6 +156,10 @@ impl Mos6507 {
         //TODO - map address to underlying components
     }
  
+    fn asl(&mut self, operand: u8) {
+        // TODO - implement ASL
+    }
+
     fn and(&mut self, operand: u8) {
         self.a = self.a & operand;
        
