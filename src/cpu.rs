@@ -63,15 +63,19 @@ impl Mos6507 {
     fn execute_instruction(&mut self, pia: &Pia6532, tia: &Tia1A, rom: &Cartridge) {
         let opcode = self.read_byte(pia, tia, rom, &AddressMode::Absolute);
         let address_mode = self.get_address_mode(opcode); 
+        let operand = self.read_byte(pia, tia, rom, &address_mode);
 
         // outer match for address mode
         match opcode {
             // ADC
             0x69 | 0x65 | 0x75 | 0x6D |
             0x7D | 0x79 | 0x61 | 0x71    => {
-                let operand = self.read_byte(pia, tia, rom, &address_mode);
                 self.adc(operand);
             },
+            0x29 | 0x25 | 0x35 | 0x2D |
+            0x3D | 0x39 | 0x21 | 0x31   => {
+                self.and(operand);
+            }
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -134,6 +138,18 @@ impl Mos6507 {
         //TODO - map address to underlying components
     }
  
+    fn and(&mut self, operand: u8) {
+        self.a = self.a & operand;
+       
+        let temp = self.a;
+
+        // negative check
+        self.set_flag((temp >> 7) == 1, NEGATIVE_MASK);
+
+        // zero check
+        self.set_flag(temp == 0, ZERO_RESULT_MASK);
+    }
+
     fn adc(&mut self, operand: u8) {
         
         let carry = CARRY_MASK & self.flags;
@@ -146,27 +162,22 @@ impl Mos6507 {
             // TODO - do I need to validate the nibbles? What does
             // the 6507 do when it has invalid BCD operands?
 
-            // TODO - I can probably optimize this later
             let mut temp = (LOW_NIBBLE_MASK & self.a) + (LOW_NIBBLE_MASK & operand) + carry;
             
-            if temp <= 9 
-            {
+            if temp <= 9 {
                 low_nibble = temp;
                 nibble_carry = 0;
-            } else 
-            {
+            } else {
                 low_nibble = (temp + 6) & LOW_NIBBLE_MASK; // BCD correction by adding 6
                 nibble_carry = 1;
             };
 
             temp = (self.a >> 4) + (operand >> 4) + nibble_carry;
             
-            if temp <= 9 
-            {
+            if temp <= 9 {
                 high_nibble = temp;
                 nibble_carry = 0;
-            } else 
-            {
+            } else {
                 high_nibble = (temp + 6) & LOW_NIBBLE_MASK; // BCD correction by adding 6
                 nibble_carry = 1;
             };
@@ -203,7 +214,6 @@ impl Mos6507 {
         self.set_flag(temp == 0, ZERO_RESULT_MASK);
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -308,6 +318,42 @@ mod tests {
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
         assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
     }
+    
+    #[test]
+    fn and() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 1;
+
+        cpu.and(1);
+
+        assert_eq!(cpu.a, 1);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+
+    #[test]
+    fn and_zero() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 0;
+
+        cpu.and(0);
+
+        assert_eq!(cpu.a, 0);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+    } 
+
+    #[test]
+    fn and_negative() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 128; // 128 unsigned has leftmost (negative) bit 1
+
+        cpu.and(128); // 128 unsigned has leftmost (negative) bit 1
+
+        assert_eq!(cpu.a, 128);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
 
     #[test]
     fn flag_value() {
