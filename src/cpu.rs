@@ -67,7 +67,6 @@ impl Mos6507 {
         let address_mode = self.get_address_mode(opcode); 
         let operand = self.read_byte(pia, tia, rom, &address_mode);
 
-        // outer match for address mode
         match opcode {
             // ADC
             0x69 | 0x65 | 0x75 | 0x6D |
