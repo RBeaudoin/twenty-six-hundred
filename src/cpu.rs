@@ -81,7 +81,7 @@ impl Mos6507 {
             // ASL
             0x0A | 0x06 | 0x16 | 0x0E |
             0x1E                        => {
-                self.asl(operand);
+                self.asl(operand, &address_mode);
             },
             _       => panic!("Unknown opcode {}", opcode),
         }
@@ -155,8 +155,21 @@ impl Mos6507 {
         //TODO - map address to underlying components
     }
  
-    fn asl(&mut self, operand: u8) {
-        // TODO - implement ASL
+    fn asl(&mut self, operand: u8, address_mode: &AddressMode) {
+        // carry check
+        self.set_flag((operand >> 7) == 1, CARRY_MASK);
+
+        let temp = operand << 1;
+
+        // negative check
+        self.set_flag((temp >> 7) == 1, NEGATIVE_MASK);
+
+        // zero check
+        self.set_flag(temp == 0, ZERO_RESULT_MASK);
+
+        if let &AddressMode::Accumulator = address_mode {
+                self.a = temp;
+        }
     }
 
     fn and(&mut self, operand: u8) {
@@ -372,6 +385,71 @@ mod tests {
         cpu.and(128); // 128 unsigned has leftmost (negative) bit 1
 
         assert_eq!(cpu.a, 128);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+
+    #[test]
+    fn asl() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 128; // 128 unsigned has leftmost (negative) bit 1
+
+        cpu.asl(128, &super::AddressMode::Accumulator);
+
+        assert_eq!(cpu.a, 0);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+    } 
+    
+    #[test]
+    fn asl_no_carry_no_negative_no_zero() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 32;
+
+        cpu.asl(32, &super::AddressMode::Accumulator);
+
+        assert_eq!(cpu.a, 64);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+    
+    #[test]
+    fn asl_no_carry_negative_no_zero() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 64;
+
+        cpu.asl(64, &super::AddressMode::Accumulator);
+
+        assert_eq!(cpu.a, 128);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+    
+    #[test]
+    fn asl_no_carry_no_negative_zero() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 0;
+
+        cpu.asl(0, &super::AddressMode::Accumulator);
+
+        assert_eq!(cpu.a, 0);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+    } 
+   
+    #[test]
+    fn asl_no_accumulator() {
+        let mut cpu = Mos6507::new();
+        cpu.a = 10;
+
+        cpu.asl(192, &super::AddressMode::ZeroPage);
+
+        assert_eq!(cpu.a, 10);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
         assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     } 
