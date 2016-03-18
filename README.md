@@ -11,6 +11,7 @@ The best way to learn a new language is to build something. I decided to write t
 This is currently a work-in-progress as I make my way through learning [Rust](https://www.rust-lang.org/) and the internals of the Atari 2600 hardware.
 
 UPDATE 03-01-2016: I'm currently focused on emulation of the [CPU](https://en.wikipedia.org/wiki/MOS_Technology_6507) 
+UPDATE 03-16-2016: Working on implementing the various instructions of the 6507
 
 ##References
 
