@@ -83,6 +83,10 @@ impl Mos6507 {
             0x1E                        => {
                 self.asl(operand, &address_mode);
             },
+            // BCC
+            0x90                        => {
+                self.bcc(operand);
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -121,6 +125,8 @@ impl Mos6507 {
                 => AddressMode::IndirectY,
             0x0A
                 => AddressMode::Accumulator,
+            0x90 
+                => AddressMode::Relative,
             _   => AddressMode::None,
         }
     }
@@ -155,6 +161,21 @@ impl Mos6507 {
         //TODO - map address to underlying components
     }
  
+    fn bcc(&mut self, operand: u8) {
+        // 6507 uses a signed operand for bcc,
+        // hence the type gymnastics
+        let signed_operand = operand as i8;
+
+        if self.flag_set(CARRY_MASK) {
+            if signed_operand < 0 {
+                let temp = -signed_operand;
+                self.pc -= temp as u16;
+            } else {
+                self.pc += operand as u16;
+            }
+        }
+    }
+
     fn asl(&mut self, operand: u8, address_mode: &AddressMode) {
         // carry check
         self.set_flag((operand >> 7) == 1, CARRY_MASK);
@@ -453,6 +474,41 @@ mod tests {
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
         assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     } 
+
+    #[test]
+    fn bcc() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::CARRY_MASK);
+
+        cpu.bcc(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+    
+    #[test]
+    fn bcc_no_carry_flag() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+
+        cpu.bcc(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
+
+    #[test]
+    fn bcc_negative_operand() {
+        let mut cpu = Mos6507::new();
+        let operand: i8 = -127;
+        cpu.pc = 128;
+        cpu.set_flag(true, super::CARRY_MASK);
+
+        cpu.bcc(operand as u8);
+
+        assert_eq!(cpu.pc, 1);
+    }
 
     #[test]
     fn flag_value() {
