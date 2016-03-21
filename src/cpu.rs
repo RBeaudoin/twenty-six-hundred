@@ -91,6 +91,10 @@ impl Mos6507 {
             0xB0                        => {
                 self.bcs(operand);
             },
+            // BEQ
+            0xF0                        => {
+                self.beq(operand);
+            }
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -177,6 +181,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn beq(&mut self, operand: u8) {
+        self.branch_on_flag(operand, true, ZERO_RESULT_MASK);
     }
 
     fn bcs(&mut self, operand: u8) {
@@ -554,6 +562,42 @@ mod tests {
 
         assert_eq!(cpu.pc, 1);
     }
+
+    #[test]
+    fn beq() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::ZERO_RESULT_MASK);
+
+        cpu.beq(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+    
+    #[test]
+    fn beq_zero_flag_not_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        
+        cpu.beq(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
+
+    #[test]
+    fn beq_negative_operand() {
+        let mut cpu = Mos6507::new();
+        let operand: i8 = -127;
+        cpu.pc = 128;
+        cpu.set_flag(true, super::ZERO_RESULT_MASK);
+
+        cpu.beq(operand as u8);
+
+        assert_eq!(cpu.pc, 1);
+    }
+
 
     #[test]
     fn flag_value() {
