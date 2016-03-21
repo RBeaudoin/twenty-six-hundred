@@ -87,6 +87,10 @@ impl Mos6507 {
             0x90                        => {
                 self.bcc(operand);
             },
+            // BCS
+            0xB0                        => {
+                self.bcs(operand);
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -125,7 +129,7 @@ impl Mos6507 {
                 => AddressMode::IndirectY,
             0x0A
                 => AddressMode::Accumulator,
-            0x90 
+            0x90 | 0xB0
                 => AddressMode::Relative,
             _   => AddressMode::None,
         }
@@ -161,12 +165,11 @@ impl Mos6507 {
         //TODO - map address to underlying components
     }
  
-    fn bcc(&mut self, operand: u8) {
-        // 6507 uses a signed operand for bcc,
-        // hence the type gymnastics
+    fn branch_on_flag(&mut self, operand: u8, predicate: bool, mask: u8) {
+        // 6507 uses signed operand for branch, hence this mess
         let signed_operand = operand as i8;
 
-        if self.flag_set(CARRY_MASK) {
+        if self.flag_set(mask) == predicate {
             if signed_operand < 0 {
                 let temp = -signed_operand;
                 self.pc -= temp as u16;
@@ -174,6 +177,14 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn bcs(&mut self, operand: u8) {
+        self.branch_on_flag(operand, true, CARRY_MASK);
+    }
+
+    fn bcc(&mut self, operand: u8) {
+        self.branch_on_flag(operand, false, CARRY_MASK);
     }
 
     fn asl(&mut self, operand: u8, address_mode: &AddressMode) {
@@ -480,7 +491,6 @@ mod tests {
         let mut cpu = Mos6507::new();
         let operand: u8 = 127;
         cpu.pc = 0;
-        cpu.set_flag(true, super::CARRY_MASK);
 
         cpu.bcc(operand);
 
@@ -488,11 +498,12 @@ mod tests {
     }
     
     #[test]
-    fn bcc_no_carry_flag() {
+    fn bcc_carry_flag_set() {
         let mut cpu = Mos6507::new();
         let operand: u8 = 127;
         cpu.pc = 0;
-
+        cpu.set_flag(true, super::CARRY_MASK);
+        
         cpu.bcc(operand);
 
         assert_eq!(cpu.pc, 0);
@@ -503,9 +514,43 @@ mod tests {
         let mut cpu = Mos6507::new();
         let operand: i8 = -127;
         cpu.pc = 128;
-        cpu.set_flag(true, super::CARRY_MASK);
 
         cpu.bcc(operand as u8);
+
+        assert_eq!(cpu.pc, 1);
+    }
+
+    #[test]
+    fn bcs() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::CARRY_MASK);
+
+        cpu.bcs(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+    
+    #[test]
+    fn bcs_carry_flag_not_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        
+        cpu.bcs(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
+
+    #[test]
+    fn bcs_negative_operand() {
+        let mut cpu = Mos6507::new();
+        let operand: i8 = -127;
+        cpu.pc = 128;
+        cpu.set_flag(true, super::CARRY_MASK);
+
+        cpu.bcs(operand as u8);
 
         assert_eq!(cpu.pc, 1);
     }
