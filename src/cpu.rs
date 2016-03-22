@@ -94,7 +94,11 @@ impl Mos6507 {
             // BEQ
             0xF0                        => {
                 self.beq(operand);
-            }
+            },
+            // BIT
+            0x24 | 0x2C                 => {
+                self.bit(operand);
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -117,11 +121,11 @@ impl Mos6507 {
         match opcode {
             0x69 | 0x29     
                 => AddressMode::Immediate,
-            0x65 | 0x25 | 0x06
+            0x65 | 0x25 | 0x06 | 0x24
                 => AddressMode::ZeroPage,
             0x75 | 0x35 | 0x16
                 => AddressMode::ZeroPageX,
-            0x6D | 0x2D | 0x0E
+            0x6D | 0x2D | 0x0E | 0x2C
                 => AddressMode::Absolute,
             0x7D | 0x3D | 0x1E
                 => AddressMode::AbsoluteX,
@@ -181,6 +185,16 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn bit(&mut self, operand: u8) {
+        let result = self.a & operand;
+        
+        println!("Result is {}", result);
+
+        self.set_flag(result == 0, ZERO_RESULT_MASK);
+        self.set_flag((result & OVERFLOW_MASK) > 0, OVERFLOW_MASK);
+        self.set_flag((result & NEGATIVE_MASK) > 0, NEGATIVE_MASK);
     }
 
     fn beq(&mut self, operand: u8) {
@@ -598,6 +612,31 @@ mod tests {
         assert_eq!(cpu.pc, 1);
     }
 
+    #[test]
+    fn bit() {
+        let mut cpu = Mos6507::new();
+        let operand = 0xC0; // This value has bits 6/7 set
+        cpu.a = 0xF0; // This value as 6/7 bits set
+
+        cpu.bit(operand);
+
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+    }
+
+    #[test]
+    fn bit_zero_flag_set() {
+        let mut cpu = Mos6507::new();
+        let operand = 0;
+        cpu.a = 0;
+
+        cpu.bit(operand);
+
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+        assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+    }
 
     #[test]
     fn flag_value() {
