@@ -99,6 +99,10 @@ impl Mos6507 {
             0x24 | 0x2C                 => {
                 self.bit(operand);
             },
+            // BMI
+            0x30                        => {
+                self.bmi(operand);
+            }
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -137,7 +141,7 @@ impl Mos6507 {
                 => AddressMode::IndirectY,
             0x0A
                 => AddressMode::Accumulator,
-            0x90 | 0xB0
+            0x90 | 0xB0 | 0x30
                 => AddressMode::Relative,
             _   => AddressMode::None,
         }
@@ -185,6 +189,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn bmi(&mut self, operand: u8) {
+        self.branch_on_flag(operand, true, NEGATIVE_MASK);
     }
 
     fn bit(&mut self, operand: u8) {
@@ -624,6 +632,30 @@ mod tests {
         assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), true);
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
     }
+
+    #[test]
+    fn bmi() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::NEGATIVE_MASK);
+
+        cpu.bmi(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+    
+    #[test]
+    fn bmi_negative_flag_not_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        
+        cpu.bmi(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
+
 
     #[test]
     fn bit_zero_flag_set() {
