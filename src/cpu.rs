@@ -102,7 +102,11 @@ impl Mos6507 {
             // BMI
             0x30                        => {
                 self.bmi(operand);
-            }
+            },
+            // BNE
+            0xD0                        => {
+                self.bmi(operand);
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -141,7 +145,7 @@ impl Mos6507 {
                 => AddressMode::IndirectY,
             0x0A
                 => AddressMode::Accumulator,
-            0x90 | 0xB0 | 0x30
+            0x90 | 0xB0 | 0x30 | 0xD0
                 => AddressMode::Relative,
             _   => AddressMode::None,
         }
@@ -189,6 +193,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn bne(&mut self, operand: u8) {
+        self.branch_on_flag(operand, false, ZERO_RESULT_MASK);
     }
 
     fn bmi(&mut self, operand: u8) {
@@ -669,6 +677,42 @@ mod tests {
         assert_eq!(cpu.flag_set(super::OVERFLOW_MASK), false);
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
     }
+    
+    #[test]
+    fn bne() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+
+        cpu.bne(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+    
+    #[test]
+    fn bne_zero_flag_not_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+       
+        cpu.set_flag(true, super::ZERO_RESULT_MASK);
+
+        cpu.bne(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
+
+    #[test]
+    fn bne_negative_operand() {
+        let mut cpu = Mos6507::new();
+        let operand: i8 = -127;
+        cpu.pc = 128;
+
+        cpu.bne(operand as u8);
+
+        assert_eq!(cpu.pc, 1);
+    }
+
 
     #[test]
     fn flag_value() {
