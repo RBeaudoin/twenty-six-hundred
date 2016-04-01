@@ -107,6 +107,10 @@ impl Mos6507 {
             0xD0                        => {
                 self.bmi(operand);
             },
+            // BPL
+            0x10                        => {
+                self.bpl(operand);
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -145,7 +149,8 @@ impl Mos6507 {
                 => AddressMode::IndirectY,
             0x0A
                 => AddressMode::Accumulator,
-            0x90 | 0xB0 | 0x30 | 0xD0
+            0x90 | 0xB0 | 0x30 | 0xD0 |
+            0x10
                 => AddressMode::Relative,
             _   => AddressMode::None,
         }
@@ -193,6 +198,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn bpl(&mut self, operand: u8) {
+        self.branch_on_flag(operand, false, NEGATIVE_MASK);
     }
 
     fn bne(&mut self, operand: u8) {
@@ -664,7 +673,6 @@ mod tests {
         assert_eq!(cpu.pc, 0);
     }
 
-
     #[test]
     fn bit_zero_flag_set() {
         let mut cpu = Mos6507::new();
@@ -711,6 +719,29 @@ mod tests {
         cpu.bne(operand as u8);
 
         assert_eq!(cpu.pc, 1);
+    }
+
+    #[test]
+    fn bpl() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+
+        cpu.bpl(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+
+    #[test]
+    fn bpl_negative_flag_not_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::NEGATIVE_MASK);
+
+        cpu.bpl(operand);
+
+        assert_eq!(cpu.pc, 0);
     }
 
 
