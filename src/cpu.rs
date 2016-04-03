@@ -744,7 +744,6 @@ mod tests {
         assert_eq!(cpu.pc, 0);
     }
 
-
     #[test]
     fn flag_value() {
         let mut cpu = Mos6507::new();
