@@ -111,6 +111,11 @@ impl Mos6507 {
             0x10                        => {
                 self.bpl(operand);
             },
+            // BRK - TODO
+            // BVC
+            0x50                        => {
+                self.bvc(operand);
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -150,7 +155,7 @@ impl Mos6507 {
             0x0A
                 => AddressMode::Accumulator,
             0x90 | 0xB0 | 0x30 | 0xD0 |
-            0x10
+            0x10 | 0x50
                 => AddressMode::Relative,
             _   => AddressMode::None,
         }
@@ -198,6 +203,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn bvc(&mut self, operand: u8) {
+        self.branch_on_flag(operand, false, OVERFLOW_MASK);
     }
 
     fn bpl(&mut self, operand: u8) {
@@ -733,7 +742,7 @@ mod tests {
     }
 
     #[test]
-    fn bpl_negative_flag_not_set() {
+    fn bpl_negative_flag_set() {
         let mut cpu = Mos6507::new();
         let operand: u8 = 127;
         cpu.pc = 0;
@@ -743,6 +752,30 @@ mod tests {
 
         assert_eq!(cpu.pc, 0);
     }
+
+    #[test]
+    fn bvc() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+
+        cpu.bvc(operand);
+
+        assert_eq!(cpu.pc, 127);
+    }
+
+    #[test]
+    fn bvc_overflow_flag_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::OVERFLOW_MASK);
+
+        cpu.bvc(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
+
 
     #[test]
     fn flag_value() {
