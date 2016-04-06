@@ -116,6 +116,10 @@ impl Mos6507 {
             0x50                        => {
                 self.bvc(operand);
             },
+            // BVS
+            0x70                        => {
+                self.bvs(operand);
+            }
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -205,6 +209,10 @@ impl Mos6507 {
         }
     }
 
+    fn bvs(&mut self, operand: u8) {
+        self.branch_on_flag(operand, true, OVERFLOW_MASK);
+    }
+    
     fn bvc(&mut self, operand: u8) {
         self.branch_on_flag(operand, false, OVERFLOW_MASK);
     }
@@ -775,7 +783,29 @@ mod tests {
 
         assert_eq!(cpu.pc, 0);
     }
+    
+    #[test]
+    fn bvs() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+        cpu.set_flag(true, super::OVERFLOW_MASK);
+        
+        cpu.bvs(operand);
 
+        assert_eq!(cpu.pc, 127);
+    }
+
+    #[test]
+    fn bvs_overflow_flag_not_set() {
+        let mut cpu = Mos6507::new();
+        let operand: u8 = 127;
+        cpu.pc = 0;
+
+        cpu.bvs(operand);
+
+        assert_eq!(cpu.pc, 0);
+    }
 
     #[test]
     fn flag_value() {
