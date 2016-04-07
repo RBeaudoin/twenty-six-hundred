@@ -119,6 +119,10 @@ impl Mos6507 {
             // BVS
             0x70                        => {
                 self.bvs(operand);
+            },
+            // CLC
+            0x18                        => {
+                self.clc();
             }
             _       => panic!("Unknown opcode {}", opcode),
         }
@@ -207,6 +211,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn clc(&mut self) {
+        self.set_flag(false, CARRY_MASK);
     }
 
     fn bvs(&mut self, operand: u8) {
@@ -672,7 +680,7 @@ mod tests {
         let mut cpu = Mos6507::new();
         let operand: u8 = 127;
         cpu.pc = 0;
-        cpu.set_flag(true, super::NEGATIVE_MASK);
+        cpu.flags = super::NEGATIVE_MASK;
 
         cpu.bmi(operand);
 
@@ -688,6 +696,35 @@ mod tests {
         cpu.bmi(operand);
 
         assert_eq!(cpu.pc, 0);
+    }
+
+    #[test]
+    fn clc() {
+        let mut cpu = Mos6507::new();
+
+        cpu.clc();
+
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn clc_carry_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = super::CARRY_MASK;
+
+        cpu.clc();
+
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn clc_carry_and_other_flags_set() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = super::CARRY_MASK | super::ZERO_RESULT_MASK | super::INTERRUPT_DISABLE_MASK;
+        
+        cpu.clc();
+
+        assert_eq!(cpu.flags, 0x06);
     }
 
     #[test]
