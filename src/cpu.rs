@@ -123,6 +123,10 @@ impl Mos6507 {
             // CLC
             0x18                        => {
                 self.clc();
+            },
+            // CLD
+            0xD8                        => {
+                self.cld();
             }
             _       => panic!("Unknown opcode {}", opcode),
         }
@@ -211,6 +215,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn cld(&mut self) {
+        self.set_flag(false, DECIMAL_MASK);
     }
 
     fn clc(&mut self) {
@@ -724,8 +732,38 @@ mod tests {
         
         cpu.clc();
 
-        assert_eq!(cpu.flags, 0x06);
+        assert_eq!(cpu.flags, super::ZERO_RESULT_MASK | super::INTERRUPT_DISABLE_MASK);
     }
+
+    #[test]
+    fn cld() {
+        let mut cpu = Mos6507::new();
+
+        cpu.cld();
+
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn cld_decimal_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = super::DECIMAL_MASK;
+
+        cpu.cld();
+
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn cld_decimal_and_other_flags_set() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = super::DECIMAL_MASK | super::ZERO_RESULT_MASK | super::INTERRUPT_DISABLE_MASK;
+        
+        cpu.cld();
+
+        assert_eq!(cpu.flags, super::ZERO_RESULT_MASK | super::INTERRUPT_DISABLE_MASK);
+    }
+
 
     #[test]
     fn bit_zero_flag_set() {
