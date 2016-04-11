@@ -127,7 +127,11 @@ impl Mos6507 {
             // CLD
             0xD8                        => {
                 self.cld();
-            }
+            },
+            // CLI
+            0x58                        => {
+                self.cli();
+            },
             _       => panic!("Unknown opcode {}", opcode),
         }
 
@@ -215,6 +219,10 @@ impl Mos6507 {
                 self.pc += operand as u16;
             }
         }
+    }
+
+    fn cli(&mut self) {
+        self.set_flag(false, INTERRUPT_DISABLE_MASK);
     }
 
     fn cld(&mut self) {
@@ -764,6 +772,34 @@ mod tests {
         assert_eq!(cpu.flags, super::ZERO_RESULT_MASK | super::INTERRUPT_DISABLE_MASK);
     }
 
+    #[test]
+    fn cli() {
+        let mut cpu = Mos6507::new();
+
+        cpu.cli();
+
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn cli_interrupt_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = super::INTERRUPT_DISABLE_MASK;
+
+        cpu.cli();
+
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn cli_interrupt_and_other_flags_set() {
+        let mut cpu = Mos6507::new();
+        cpu.flags = super::DECIMAL_MASK | super::ZERO_RESULT_MASK | super::INTERRUPT_DISABLE_MASK;
+        
+        cpu.cli();
+
+        assert_eq!(cpu.flags, super::DECIMAL_MASK | super::ZERO_RESULT_MASK);
+    }
 
     #[test]
     fn bit_zero_flag_set() {
