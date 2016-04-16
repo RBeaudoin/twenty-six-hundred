@@ -141,6 +141,10 @@ impl Mos6507 {
             0xDD | 0xD9 | 0xC1 | 0xD1   => {
                 self.cmp(operand);
             },
+            // CPY
+            0xE0 | 0xE4 | 0xEC          => {
+                self.cpx(operand);
+            },
 
             _       => panic!("Unknown opcode {}", opcode),
         }
@@ -162,15 +166,15 @@ impl Mos6507 {
 
     fn get_address_mode(&self, opcode: u8) -> AddressMode {
         match opcode {
-            0x69 | 0x29 | 0xC9
+            0x69 | 0x29 | 0xC9 | 0xE0
                 => AddressMode::Immediate,
             0x65 | 0x25 | 0x06 | 0x24 |
-            0xC5
+            0xC5 | 0xE4
                 => AddressMode::ZeroPage,
             0x75 | 0x35 | 0x16 | 0xD5
                 => AddressMode::ZeroPageX,
             0x6D | 0x2D | 0x0E | 0x2C |
-            0xCD
+            0xCD | 0xEC
                 => AddressMode::Absolute,
             0x7D | 0x3D | 0x1E | 0xDD
                 => AddressMode::AbsoluteX,
@@ -232,6 +236,16 @@ impl Mos6507 {
             }
         }
     }
+
+    fn cpx(&mut self, operand: u8) {
+        println!("self.x: {}, operand: {}", self.x, operand);
+        let result = (self.x as i8) - (operand as i8);
+
+        self.set_flag(result == 0, ZERO_RESULT_MASK);
+        self.set_flag(result < 0, NEGATIVE_MASK);
+        self.set_flag(result >= 0, CARRY_MASK);
+    }
+
 
     fn cmp(&mut self, operand: u8) {
         let result = (self.a as i8) - (operand as i8);
@@ -974,7 +988,7 @@ mod tests {
     #[test]
     fn cmp() {
         let mut cpu = Mos6507::new();
-        cpu.a = 128; // 128 unsigned has leftmost (negative) bit 1
+        cpu.a = 128;
         
         cpu.cmp(128);
 
@@ -996,7 +1010,46 @@ mod tests {
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
         assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
     } 
+   
+    #[test]
+    fn cpx() {
+        let mut cpu = Mos6507::new();
+        cpu.x = 100;
+        
+        cpu.cpx(100);
+
+        assert_eq!(cpu.x, 100);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+    }
     
+    #[test]
+    fn cpx_negative_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.x = 32;
+
+        cpu.cpx(33);
+
+        assert_eq!(cpu.x, 32);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), false);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+    
+    #[test]
+    fn cpx_carry_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.x = 33;
+
+        cpu.cpx(32);
+
+        assert_eq!(cpu.x, 33);
+        assert_eq!(cpu.flag_set(super::CARRY_MASK), true);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+
     #[test]
     fn cmp_carry_flag_set() {
         let mut cpu = Mos6507::new();
