@@ -154,6 +154,12 @@ impl Mos6507 {
             0xCA                        => {
                 self.dex();
             },
+            // EOR TODO
+            // INC TODO
+            // INX
+            0xE8                        => {
+                self.inc();
+            },
 
             _       => panic!("Unknown opcode {}", opcode),
         }
@@ -247,7 +253,15 @@ impl Mos6507 {
         }
     }
 
-   fn dex(&mut self) {
+    fn inc(&mut self) {
+        let result = (self.x as i8) + 1;
+
+        self.set_flag(result == 0, ZERO_RESULT_MASK);
+        self.set_flag(result < 0, NEGATIVE_MASK);
+        self.x = (result as u8);
+    }
+
+    fn dex(&mut self) {
        let result = (self.x as i8) - 1;
 
        self.set_flag(result == 0, ZERO_RESULT_MASK);
@@ -1157,6 +1171,42 @@ mod tests {
         cpu.x = 0;
 
         cpu.dex();
+
+        assert_eq!(cpu.x, 255);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+
+    #[test]
+    fn inc() {
+        let mut cpu = Mos6507::new();
+        cpu.x = 23;
+
+        cpu.inc();
+
+        assert_eq!(cpu.x, 24);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), false);
+    } 
+   
+    #[test]
+    fn inc_zero_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.x = 255;
+
+        cpu.inc();
+
+        assert_eq!(cpu.x, 0);
+        assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), false);
+        assert_eq!(cpu.flag_set(super::ZERO_RESULT_MASK), true);
+    } 
+   
+    #[test]
+    fn inc_negative_flag_set() {
+        let mut cpu = Mos6507::new();
+        cpu.x = 254;
+
+        cpu.inc();
 
         assert_eq!(cpu.x, 255);
         assert_eq!(cpu.flag_set(super::NEGATIVE_MASK), true);
